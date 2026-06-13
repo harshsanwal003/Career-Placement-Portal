@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Career Match &amp; Placement Portal</title>
+  <meta name="description" content="Find your dream job with AI-powered skill matching. Join thousands of professionals and companies on the premier career portal.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── Index-specific ─────────────── */
+    .login-card {
+      width: 100%; max-width: 440px;
+      padding: 2.5rem;
+      background: rgba(17,17,40,0.85);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 24px;
+      backdrop-filter: blur(24px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .login-card:hover { transform: none !important; } /* override global */
+
+    /* animated scene canvas */
+    #scene-canvas {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Features row */
+    .features-row {
+      display: flex; gap: 1.2rem; flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+    .feat-pill {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 50px;
+      padding: 0.45rem 1rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      transition: all 0.3s;
+    }
+    .feat-pill:hover { background: rgba(124,58,237,0.15); border-color: rgba(124,58,237,0.35); color: var(--primary-light); }
+    .feat-pill .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* Hero left text */
+    .hero-left { position: relative; z-index: 1; padding-right: 2rem; }
+
+    /* scrolling ticker */
+    .ticker-wrap { overflow: hidden; border-top: 1px solid var(--glass-border); margin-top: 3rem; padding: 0.7rem 0; }
+    .ticker {
+      display: flex; gap: 3rem; white-space: nowrap;
+      animation: ticker 30s linear infinite;
+      font-size: 0.82rem; color: var(--text-muted);
+    }
+    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .ticker span { display: inline-flex; align-items: center; gap: 0.5rem; }
+    .ticker .sep { color: var(--primary); font-size: 1.2rem; }
+
+    /* Wave divider */
+    .wave-top {
+      position: absolute; bottom: -2px; left: 0; width: 100%;
+      fill: var(--dark);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Smoke blobs -->
+<div class="smoke-blob smoke-blob-1"></div>
+
+<!-- Animated canvas scene -->
+<canvas id="scene-canvas" aria-hidden="true"></canvas>
+
+<!-- ─── NAVBAR ──────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container">
+    <a class="navbar-brand text-gradient fw-bold" href="#">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style="vertical-align:-4px;margin-right:6px">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#ng)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="ng" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+      </svg>CareerAI
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <span class="smoke-tag smoke-tag-purple">✨ AI-Powered</span>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+        <span class="icon-dark">🌙</span>
+        <span class="icon-light">☀️</span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── HERO ────────────────────────────── -->
+<div class="page-wrapper">
+  <div class="container">
+    <div class="hero-section">
+      <div class="row align-items-center g-5 w-100">
+
+        <!-- Left: hero text -->
+        <div class="col-lg-6 hero-left">
+          <div class="hero-badge">🚀 &nbsp;Next-Gen Career Matching</div>
+          <h1 class="hero-title">
+            Land Your<br>
+            <span class="text-gradient">Dream Job</span><br>
+            with AI Precision
+          </h1>
+          <p class="hero-sub">
+            Upload your resume, get AI-matched to the perfect roles, and connect with top companies — all in one place.
+          </p>
+
+          <div class="features-row">
+            <div class="feat-pill"><span class="dot" style="background:#a78bfa"></span>Smart Skill Matching</div>
+            <div class="feat-pill"><span class="dot" style="background:#22d3ee"></span>Resume Insights</div>
+            <div class="feat-pill"><span class="dot" style="background:#34d399"></span>Real-time Rankings</div>
+            <div class="feat-pill"><span class="dot" style="background:#fcd34d"></span>Instant Applications</div>
+          </div>
+
+          <div class="hero-stats">
+            <div class="hero-stat-item"><div class="num">2.4K+</div><div class="lbl">Active Jobs</div></div>
+            <div class="hero-stat-item"><div class="num">850+</div><div class="lbl">Companies</div></div>
+            <div class="hero-stat-item"><div class="num">98%</div><div class="lbl">Match Rate</div></div>
+          </div>
+        </div>
+
+        <!-- Right: auth card -->
+        <div class="col-lg-6 d-flex justify-content-center justify-content-lg-end">
+          <div class="login-card">
+            <div class="mb-4 text-center">
+              <h2 class="fw-700" style="font-size:1.4rem;">Welcome back 👋</h2>
+              <p style="font-size:0.85rem;color:var(--text-muted);margin-top:0.3rem;">Sign in to your account or create a new one</p>
+            </div>
+
+            <ul class="nav nav-pills nav-justified mb-4" id="authTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active w-100" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">Login</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link w-100" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">Register</button>
+              </li>
+            </ul>
+
+            <div class="tab-content" id="authTabContent">
+              <!-- Login tab -->
+              <div class="tab-pane fade show active" id="login" role="tabpanel">
+                <form id="loginForm">
+                  <div class="mb-3">
+                    <label for="loginEmail">Email address</label>
+                    <input type="email" id="loginEmail" class="form-control" placeholder="you@example.com" required>
+                  </div>
+                  <div class="mb-3" id="passwordGroup">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="••••••••">
+                  </div>
+                  <div class="mb-3 d-none" id="otpGroup">
+                    <label for="loginOtp">OTP Code</label>
+                    <input type="text" id="loginOtp" class="form-control" placeholder="123456">
+                  </div>
+                  
+                  <div class="d-flex justify-content-between mb-3" style="font-size:0.8rem;">
+                    <a href="#" id="toggleOtpBtn" style="color:var(--primary);text-decoration:none;">Login with OTP instead</a>
+                  </div>
+
+                  <button type="submit" id="loginBtn" class="btn btn-primary w-100 py-2 mt-1">
+                    Sign In &rarr;
+                  </button>
+                  <button type="button" id="sendOtpBtn" class="btn btn-outline-primary w-100 py-2 mt-1 d-none">
+                    Send OTP
+                  </button>
+                  <div id="loginError" class="text-danger mt-2 text-center" style="font-size:0.85rem;"></div>
+                </form>
+                <div class="mt-3 text-center" style="font-size:0.8rem;color:var(--text-muted);">
+                  Demo: <span class="smoke-tag smoke-tag-purple">admin@portal.com / admin123</span>
+                </div>
+              </div>
+
+              <!-- Register tab -->
+              <div class="tab-pane fade" id="register" role="tabpanel">
+                <form id="registerForm">
+                  <div class="mb-3">
+                    <label for="regName">Full Name</label>
+                    <input type="text" id="regName" class="form-control" placeholder="John Doe" required>
+                  </div>
+                  <div class="mb-3">
+                    <label for="regEmail">Email</label>
+                    <input type="email" id="regEmail" class="form-control" placeholder="you@example.com" required>
+                  </div>
+                  <div class="mb-3">
+                    <label for="regPassword">Password</label>
+                    <input type="password" id="regPassword" class="form-control" placeholder="••••••••" required>
+                  </div>
+                  <div class="mb-3">
+                    <label for="regRole">I am a…</label>
+                    <select id="regRole" class="form-select" required>
+                      <option value="JOB_SEEKER">🎯 Job Seeker</option>
+                      <option value="COMPANY">🏢 Company / Recruiter</option>
+                    </select>
+                  </div>
+                  <div class="mb-3 d-none" id="companyNameDiv">
+                    <label for="regCompanyName">Company Name</label>
+                    <input type="text" id="regCompanyName" class="form-control" placeholder="Acme Corp">
+                  </div>
+                  <button type="submit" id="registerBtn" class="btn btn-primary w-100 py-2 mt-1">
+                    Create Account &rarr;
+                  </button>
+                  <div id="regError" class="text-danger mt-2 text-center" style="font-size:0.85rem;"></div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div><!-- /col -->
+
+      </div>
+    </div>
+
+    <!-- ─── TICKER ───────────────────────── -->
+    <div class="ticker-wrap">
+      <div class="ticker">
+        <span>🤖 AI Resume Parsing</span><span class="sep">·</span>
+        <span>💼 Top Companies</span><span class="sep">·</span>
+        <span>📊 Smart Match Score</span><span class="sep">·</span>
+        <span>🚀 Instant Apply</span><span class="sep">·</span>
+        <span>🎯 Skill Gap Analysis</span><span class="sep">·</span>
+        <span>📈 Career Growth</span><span class="sep">·</span>
+        <span>🤖 AI Resume Parsing</span><span class="sep">·</span>
+        <span>💼 Top Companies</span><span class="sep">·</span>
+        <span>📊 Smart Match Score</span><span class="sep">·</span>
+        <span>🚀 Instant Apply</span><span class="sep">·</span>
+        <span>🎯 Skill Gap Analysis</span><span class="sep">·</span>
+        <span>📈 Career Growth</span><span class="sep">·</span>
+      </div>
+    </div>
+  </div><!-- /container -->
+</div><!-- /page-wrapper -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+<script>
+  /* ── Redirect if already logged in ─── */
+  if(getToken() && localStorage.getItem('role')) {
+    redirectByRole(localStorage.getItem('role'));
+  }
+
+  /* ── Company name field toggle ──────── */
+  document.getElementById('regRole').addEventListener('change', function() {
+    const show = this.value === 'COMPANY';
+    document.getElementById('companyNameDiv').classList.toggle('d-none', !show);
+    document.getElementById('regCompanyName').required = show;
+  });
+
+  /* ── Login form & OTP Logic ─────────── */
+  let useOtp = false;
+  let otpSent = false;
+  
+  document.getElementById('toggleOtpBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    useOtp = !useOtp;
+    if (useOtp) {
+      document.getElementById('passwordGroup').classList.add('d-none');
+      document.getElementById('loginBtn').classList.add('d-none');
+      document.getElementById('sendOtpBtn').classList.remove('d-none');
+      e.target.innerText = "Login with Password instead";
+    } else {
+      document.getElementById('passwordGroup').classList.remove('d-none');
+      document.getElementById('otpGroup').classList.add('d-none');
+      document.getElementById('loginBtn').classList.remove('d-none');
+      document.getElementById('loginBtn').innerText = 'Sign In →';
+      document.getElementById('sendOtpBtn').classList.add('d-none');
+      e.target.innerText = "Login with OTP instead";
+      otpSent = false;
+    }
+  });
+
+  document.getElementById('sendOtpBtn').addEventListener('click', async () => {
+    const email = document.getElementById('loginEmail').value;
+    if (!email) {
+      document.getElementById('loginError').innerText = 'Please enter your email first.';
+      return;
+    }
+    const btn = document.getElementById('sendOtpBtn');
+    btn.innerHTML = 'Sending...'; btn.disabled = true;
+    document.getElementById('loginError').innerText = '';
+    
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({email})
+      });
+      if(res.ok) {
+        document.getElementById('otpGroup').classList.remove('d-none');
+        btn.classList.add('d-none');
+        const loginBtn = document.getElementById('loginBtn');
+        loginBtn.classList.remove('d-none');
+        loginBtn.innerText = 'Verify & Sign In →';
+        otpSent = true;
+        document.getElementById('loginError').innerHTML = '<span style="color:#10b981;">OTP sent successfully! Check your console or email.</span>';
+      } else {
+        document.getElementById('loginError').innerText = 'Email not found or error sending OTP.';
+        btn.innerHTML = 'Send OTP'; btn.disabled = false;
+      }
+    } catch(err) {
+      document.getElementById('loginError').innerText = 'Server error.';
+      btn.innerHTML = 'Send OTP'; btn.disabled = false;
+    }
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('loginBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in…';
+    btn.disabled = true;
+    try {
+      const email = document.getElementById('loginEmail').value;
+      
+      if (useOtp && otpSent) {
+        const otp = document.getElementById('loginOtp').value;
+        if (!otp) throw new Error('Please enter the OTP.');
+        const res = await fetch('/api/auth/verify-otp', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({email, otp})
+        });
+        if(!res.ok) throw new Error('Invalid or expired OTP.');
+        const data = await res.json();
+        setToken(data.token);
+        localStorage.setItem('role', data.role);
+        redirectByRole(data.role);
+      } else {
+        await login(email, document.getElementById('loginPassword').value);
+      }
+    } catch(err) {
+      document.getElementById('loginError').innerText = err.message;
+      btn.innerHTML = useOtp ? 'Verify & Sign In →' : 'Sign In →'; 
+      btn.disabled = false;
+    }
+  });
+
+  /* ── Register form ──────────────────── */
+  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('registerBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating…';
+    btn.disabled = true;
+    try {
+      await register(
+        document.getElementById('regName').value,
+        document.getElementById('regEmail').value,
+        document.getElementById('regPassword').value,
+        document.getElementById('regRole').value,
+        document.getElementById('regCompanyName').value
+      );
+    } catch(err) {
+      document.getElementById('regError').innerText = err.message;
+      btn.innerHTML = 'Create Account →'; btn.disabled = false;
+    }
+  });
+
+  /* ══════════════════════════════════════
+     CANVAS ANIMATION — Animated People
+  ══════════════════════════════════════ */
+  const canvas = document.getElementById('scene-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ─ Color palette matching CSS vars ─ */
+  const PURPLE = '#7c3aed', LAVENDER = '#a78bfa', CYAN = '#06b6d4',
+        AMBER  = '#f59e0b', GREEN   = '#10b981', ROSE = '#f43f5e';
+
+  /* ── Person class ─────────────────── */
+  class WalkingPerson {
+    constructor() { this.reset(true); }
+    reset(init = false) {
+      this.x = init ? Math.random() * W : -80;
+      this.y = H * (0.55 + Math.random() * 0.3);
+      this.speed = 0.6 + Math.random() * 0.8;
+      this.scale = 0.6 + Math.random() * 0.6;
+      this.t = Math.random() * Math.PI * 2;
+      this.color = [LAVENDER, CYAN, AMBER, GREEN][Math.floor(Math.random()*4)];
+      this.bagColor = [PURPLE, ROSE, AMBER, GREEN][Math.floor(Math.random()*4)];
+      this.hasBag = Math.random() > 0.4;
+      this.hasLaptop = Math.random() > 0.6;
+      this.opacity = 0.18 + Math.random() * 0.22;
+    }
+    update() {
+      this.x += this.speed;
+      this.t += 0.07;
+      if(this.x > W + 100) this.reset();
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.scale(this.scale, this.scale);
+      ctx.globalAlpha = this.opacity;
+
+      const legAng = Math.sin(this.t) * 0.45;
+      const armAng = Math.sin(this.t) * 0.35;
+      const bob    = Math.sin(this.t * 2) * 2;
+
+      // Shadow
+      ctx.save();
+      ctx.globalAlpha = this.opacity * 0.3;
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(0, 62 + bob, 18, 5, 0, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+
+      ctx.save(); ctx.translate(0, bob);
+
+      // Legs
+      const lc = this.color;
+      [[legAng, -8], [-legAng, 8]].forEach(([ang, ox]) => {
+        ctx.save();
+        ctx.translate(ox, 30);
+        ctx.rotate(ang);
+        ctx.fillStyle = lc;
+        ctx.fillRect(-4, 0, 8, 28);
+        // Shoe
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.ellipse(ang > 0 ? 6 : -6, 28, 10, 5, ang, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+      });
+
+      // Body
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.roundRect(-14, 0, 28, 34, 8);
+      ctx.fill();
+
+      // Arms
+      [[-armAng, -16], [armAng + (this.hasBag ? 0.3 : 0), 16]].forEach(([ang, ox], i) => {
+        ctx.save();
+        ctx.translate(ox, 6);
+        ctx.rotate(ang);
+        ctx.fillStyle = this.color;
+        ctx.fillRect(-4, 0, 8, 22);
+        // Bag in right hand
+        if(i === 1 && this.hasBag) {
+          ctx.fillStyle = this.bagColor;
+          ctx.fillRect(-6, 18, 16, 12);
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-2, 18); ctx.quadraticCurveTo(3, 12, 8, 18); ctx.stroke();
+        }
+        // Laptop in left hand
+        if(i === 0 && this.hasLaptop) {
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(-8, 16, 16, 10);
+          ctx.fillStyle = '#7c3aed';
+          ctx.fillRect(-6, 17, 12, 7);
+        }
+        ctx.restore();
+      });
+
+      // Head
+      ctx.fillStyle = '#f5c5a3';
+      ctx.beginPath(); ctx.arc(0, -14, 14, 0, Math.PI*2); ctx.fill();
+      // Hair
+      ctx.fillStyle = ['#1a1a2e','#3d2b1f','#c0392b','#2c3e50'][Math.floor(Math.random()*4) % 4]; // deterministic enough
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath(); ctx.arc(0, -22, 14, Math.PI, 0); ctx.fill();
+      // Eyes
+      ctx.fillStyle = '#1a1a2e';
+      [-5, 5].forEach(x => {
+        ctx.beginPath(); ctx.arc(x, -14, 2, 0, Math.PI*2); ctx.fill();
+      });
+      // Smile
+      ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, -12, 5, 0.2, Math.PI - 0.2); ctx.stroke();
+
+      ctx.restore();
+      ctx.restore();
+    }
+  }
+
+  /* ── Thinking person (floating) ───── */
+  class ThinkingPerson {
+    constructor(x, y, color) {
+      this.x = x; this.y = y; this.color = color;
+      this.t = Math.random() * Math.PI * 2;
+      this.bubbleT = 0;
+      this.icons = ['💼','🎯','📊','✨','🚀'];
+      this.currentIcon = 0;
+      this.iconTimer = 0;
+      this.scale = 0.9 + Math.random() * 0.3;
+      this.opacity = 0.15 + Math.random() * 0.12;
+    }
+    update() {
+      this.t += 0.02;
+      this.bubbleT = (this.bubbleT + 0.015) % 1;
+      this.iconTimer++;
+      if(this.iconTimer > 120) { this.currentIcon = (this.currentIcon + 1) % this.icons.length; this.iconTimer = 0; }
+    }
+    draw(ctx) {
+      const bob = Math.sin(this.t) * 10;
+      ctx.save();
+      ctx.translate(this.x, this.y + bob);
+      ctx.scale(this.scale, this.scale);
+      ctx.globalAlpha = this.opacity;
+
+      // Sitting body
+      ctx.fillStyle = this.color;
+      ctx.beginPath(); ctx.roundRect(-15, -10, 30, 36, 8); ctx.fill();
+
+      // Legs (sitting)
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-22, 22, 16, 10); // left
+      ctx.fillRect(6, 22, 16, 10);   // right
+
+      // Right arm up (thinking pose)
+      ctx.save(); ctx.translate(18, 0); ctx.rotate(-0.6);
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-4, 0, 8, 22);
+      ctx.restore();
+
+      // Left arm down
+      ctx.save(); ctx.translate(-18, 2); ctx.rotate(0.2);
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-4, 0, 8, 18);
+      ctx.restore();
+
+      // Head
+      ctx.fillStyle = '#f5c5a3';
+      ctx.beginPath(); ctx.arc(0, -24, 14, 0, Math.PI*2); ctx.fill();
+      // Hair
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath(); ctx.arc(0, -32, 14, Math.PI, 0); ctx.fill();
+      // Eyes (one squinted = thinking)
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath(); ctx.arc(-5, -24, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(2,-24); ctx.lineTo(8,-22); ctx.lineWidth=2; ctx.stroke();
+
+      // Hand on chin
+      ctx.fillStyle = '#f5c5a3';
+      ctx.beginPath(); ctx.arc(14, -12, 6, 0, Math.PI*2); ctx.fill();
+
+      // Thought bubble
+      const bp = this.bubbleT;
+      const bubbleO = Math.sin(bp * Math.PI);
+      ctx.globalAlpha = this.opacity * bubbleO * 1.5;
+      const bx = 30, by = -50 - bp * 30;
+      // dots
+      [0.15, 0.3, 0.5].forEach((frac, i) => {
+        const r = 3 + i * 2;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(bx - 20 + i * 12, by + 20, r, 0, Math.PI*2);
+        ctx.fill();
+      });
+      // bubble
+      ctx.fillStyle = `rgba(255,255,255,0.06)`;
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(bx, by, 24, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+      // icon inside bubble
+      ctx.globalAlpha = this.opacity * bubbleO * 2;
+      ctx.font = '22px serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(this.icons[this.currentIcon], bx, by);
+
+      ctx.restore();
+    }
+  }
+
+  /* ── Floating particles (smoke) ────── */
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random() * W;
+      this.y = H + 20;
+      this.r = 2 + Math.random() * 4;
+      this.speed = 0.3 + Math.random() * 0.5;
+      this.drift = (Math.random() - 0.5) * 0.3;
+      this.colors = [PURPLE, CYAN, LAVENDER, AMBER];
+      this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+      this.alpha = 0;
+      this.life = 0;
+      this.maxLife = 200 + Math.random() * 200;
+    }
+    update() {
+      this.y -= this.speed;
+      this.x += this.drift;
+      this.life++;
+      if(this.life < 40) this.alpha = this.life / 40 * 0.25;
+      else if(this.life > this.maxLife - 40) this.alpha = (this.maxLife - this.life) / 40 * 0.25;
+      else this.alpha = 0.25;
+      if(this.life > this.maxLife) this.reset();
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.globalAlpha = this.alpha;
+      ctx.fillStyle = this.color;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /* ── Init scene objects ─────────────── */
+  const walkers = Array.from({length: 6}, () => new WalkingPerson());
+  const thinkers = [
+    new ThinkingPerson(W * 0.08, H * 0.6, LAVENDER),
+    new ThinkingPerson(W * 0.88, H * 0.55, CYAN),
+    new ThinkingPerson(W * 0.5,  H * 0.85, AMBER),
+  ];
+  const particles = Array.from({length: 60}, () => {
+    const p = new Particle();
+    p.life = Math.random() * p.maxLife; // stagger
+    return p;
+  });
+
+  function updateThinkerPositions() {
+    thinkers[0].x = W * 0.08;  thinkers[0].y = H * 0.6;
+    thinkers[1].x = W * 0.88;  thinkers[1].y = H * 0.55;
+    thinkers[2].x = W * 0.5;   thinkers[2].y = H * 0.85;
+  }
+
+  /* ── Animation loop ─────────────────── */
+  function animate() {
+    ctx.clearRect(0, 0, W, H);
+
+    particles.forEach(p => { p.update(); p.draw(ctx); });
+    walkers.forEach(p  => { p.update(); p.draw(ctx); });
+    thinkers.forEach(p => { p.update(); p.draw(ctx); });
+
+    requestAnimationFrame(animate);
+  }
+
+  window.addEventListener('resize', () => { resize(); updateThinkerPositions(); });
+  animate();
+</script>
+<script>
+  /* ── Theme Toggle ── */
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('careerPortalTheme', next);
+  }
+  // Apply saved theme immediately
+  (function() {
+    const saved = localStorage.getItem('careerPortalTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+</script>
+</body>
+</html>

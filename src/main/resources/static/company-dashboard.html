@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Dashboard | CareerAI</title>
+  <meta name="description" content="Post jobs and find top AI-ranked talent for your company.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #scene-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
+    .section-head {
+      display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1.2rem;
+    }
+    .section-head h4 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .section-head .icon-box {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .job-post-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1rem;
+      transition: all 0.3s;
+    }
+    .job-post-item:hover {
+      background: rgba(6,182,212,0.06);
+      border-color: rgba(6,182,212,0.3);
+      transform: translateX(4px);
+    }
+    .empty-state { text-align:center; padding:2.5rem 0; color:var(--text-muted); }
+    .empty-state .empty-icon { font-size:2.8rem; display:block; margin-bottom:0.7rem; opacity:0.5; }
+    .profile-pill {
+      display:flex; align-items:center; gap:0.6rem;
+      background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.25);
+      border-radius:50px; padding:0.4rem;
+    }
+    .profile-avatar {
+      width:40px; height:40px; border-radius:50%;
+      background:linear-gradient(135deg,var(--accent),var(--primary));
+      display:flex; align-items:center; justify-content:center;
+      font-size:1rem; font-weight:700; color:#fff; flex-shrink:0;
+    }
+    /* modal overrides */
+    .rank-badge {
+      width:32px; height:32px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.78rem; font-weight:800; flex-shrink:0;
+    }
+    .rank-1 { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; }
+    .rank-2 { background:rgba(255,255,255,0.15); color:#e2e8f0; }
+    .rank-3 { background:rgba(205,127,50,0.3); color:#fbbf24; }
+    .rank-other { background:rgba(255,255,255,0.08); color:var(--text-muted); }
+    .applicant-row {
+      display:flex; align-items:center; gap:0.8rem;
+      padding:0.8rem 0; border-bottom:1px solid var(--glass-border);
+    }
+    .applicant-row:last-child { border-bottom:none; }
+    .applicant-avatar {
+      width:36px; height:36px; border-radius:50%;
+      background:linear-gradient(135deg,var(--primary),var(--accent));
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.85rem; font-weight:700; color:#fff; flex-shrink:0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="smoke-blob smoke-blob-1"></div>
+<canvas id="scene-canvas" aria-hidden="true"></canvas>
+
+<!-- ─── NAVBAR ──────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container">
+    <a class="navbar-brand text-gradient fw-bold" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align:-3px;margin-right:6px">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#ng3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="ng3" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+      </svg>CareerAI
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <div class="profile-pill">
+        <div class="profile-avatar" id="avatarInitial">🏢</div>
+        <span id="companyName" style="font-size:0.82rem;color:var(--text-muted);padding-right:0.6rem;"></span>
+      </div>
+      <span class="smoke-tag smoke-tag-cyan">🏢 Recruiter</span>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+        <span class="icon-dark">🌙</span>
+        <span class="icon-light">☀️</span>
+      </button>
+      <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── MAIN ─────────────────────────────── -->
+<div class="page-wrapper">
+  <div class="container py-4">
+
+    <!-- Welcome Header -->
+    <div class="dash-header">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div>
+          <div class="dash-welcome">Welcome, <span id="companyDisplayName" class="text-gradient">Company</span> 🏢</div>
+          <div class="dash-sub">Post jobs and find your perfect AI-ranked candidates</div>
+        </div>
+        <div class="ms-auto">
+          <span class="smoke-tag smoke-tag-amber" id="jobCountTag">0 Active Listings</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+
+      <!-- ── Left: Post Job ────────────── -->
+      <div class="col-lg-4">
+        <div class="card p-4">
+          <div class="section-head">
+            <div class="icon-box" style="background:rgba(245,158,11,0.2);">✨</div>
+            <h4>Post a New Job</h4>
+          </div>
+          <form id="jobForm">
+            <div class="mb-3">
+              <label for="jobTitle">Job Title</label>
+              <input type="text" id="jobTitle" class="form-control" placeholder="e.g. Senior Backend Engineer" required>
+            </div>
+            <div class="mb-3">
+              <label for="jobDesc">Description</label>
+              <textarea id="jobDesc" class="form-control" rows="4"
+                placeholder="Describe the role, responsibilities, and what makes it exciting…" required></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="jobSkills">Required Skills</label>
+              <input type="text" id="jobSkills" class="form-control"
+                placeholder="java, spring, sql, docker" required>
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem;">Comma-separated for AI matching</div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2" id="postBtn">
+              🚀 Post Job
+            </button>
+            <div id="postMsg" class="mt-2 text-center" style="font-size:0.85rem;"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── Right: Job Listings ────────── -->
+      <div class="col-lg-8">
+        <div class="card p-4">
+          <div class="section-head">
+            <div class="icon-box" style="background:rgba(6,182,212,0.2);">📋</div>
+            <h4>My Job Postings</h4>
+            <span id="jobCountBadge" class="badge bg-secondary ms-1">0</span>
+          </div>
+          <div id="jobsList">
+            <div class="empty-state"><span class="empty-icon">🔄</span>Loading your listings…</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ─── Applicants Modal ──────────────────── -->
+<div class="modal fade" id="applicantsModal" tabindex="-1" aria-label="Applicants modal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h5 class="modal-title text-gradient fw-bold" id="modalJobTitle">Applicants</h5>
+          <div style="font-size:0.8rem;color:var(--text-muted);">Ranked by AI Match Score</div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="applicantsList" style="max-height:60vh;overflow-y:auto;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+<script>
+  if(!getToken() || localStorage.getItem('role') !== 'COMPANY') {
+    window.location.href = '/index.html';
+  }
+
+  const applicantsModal = new bootstrap.Modal(document.getElementById('applicantsModal'));
+
+  async function loadData() {
+    try {
+      const profileRes = await fetch(API_URL + '/company/profile', { headers: authHeaders() });
+      const profile = await profileRes.json();
+      document.getElementById('companyName').innerText = profile.companyName;
+      document.getElementById('companyDisplayName').innerText = profile.companyName;
+      document.getElementById('avatarInitial').innerText = profile.companyName.charAt(0).toUpperCase();
+
+      const jobsRes = await fetch(API_URL + '/company/jobs', { headers: authHeaders() });
+      const jobs = await jobsRes.json();
+
+      document.getElementById('jobCountBadge').innerText = jobs.length;
+      document.getElementById('jobCountTag').innerText = jobs.length + ' Active Listing' + (jobs.length!==1?'s':'');
+
+      if(jobs.length === 0) {
+        document.getElementById('jobsList').innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span>No jobs posted yet. Create your first listing!</div>';
+        return;
+      }
+
+      document.getElementById('jobsList').innerHTML = jobs.map(job => `
+        <div class="job-post-item">
+          <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+            <div style="flex:1">
+              <h5 style="font-size:1rem;font-weight:700;margin-bottom:0.3rem;">${job.title}</h5>
+              <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:0.5rem;">${job.description}</p>
+              <div class="d-flex flex-wrap gap-1">
+                ${job.requiredSkills.split(',').map(s =>
+                  `<span class="smoke-tag smoke-tag-amber" style="font-size:0.72rem;">${s.trim()}</span>`
+                ).join('')}
+              </div>
+            </div>
+            <button class="btn btn-info btn-sm px-3" onclick="viewApplicants(${job.id}, '${job.title.replace(/'/g,"\\'")}')">
+              👥 Applicants
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } catch(err) { console.error(err); }
+  }
+
+  async function viewApplicants(jobId, jobTitle) {
+    document.getElementById('modalJobTitle').innerText = jobTitle;
+    document.getElementById('applicantsList').innerHTML =
+      '<div class="empty-state"><span class="empty-icon">🔄</span>Loading candidates…</div>';
+    applicantsModal.show();
+
+    try {
+      const res = await fetch(API_URL + '/company/jobs/' + jobId + '/applications', { headers: authHeaders() });
+      const apps = await res.json();
+
+      if(apps.length === 0) {
+        document.getElementById('applicantsList').innerHTML =
+          '<div class="empty-state"><span class="empty-icon">📭</span>No applicants yet. Share the job listing!</div>';
+        return;
+      }
+
+      document.getElementById('applicantsList').innerHTML = apps.map((app, i) => {
+        const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+        const score = app.score.toFixed(1);
+        const scoreColor = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+        return `
+          <div class="applicant-row">
+            <div class="rank-badge ${rankClass}">#${i+1}</div>
+            <div class="applicant-avatar">${app.jobSeeker.user.name.charAt(0).toUpperCase()}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:0.95rem;">${app.jobSeeker.user.name}</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);">${app.jobSeeker.user.email}</div>
+              <div class="d-flex flex-wrap gap-1 mt-1">
+                ${(app.jobSeeker.skills||'').split(',').slice(0,4).map(s =>
+                  `<span class="smoke-tag smoke-tag-purple" style="font-size:0.68rem;">${s.trim()}</span>`
+                ).join('')}
+              </div>
+            </div>
+            <div class="text-end">
+              <div style="font-size:1.1rem;font-weight:800;color:${scoreColor};">${score}%</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);">Match</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch(err) {
+      document.getElementById('applicantsList').innerHTML =
+        '<div class="text-danger text-center py-3">Failed to load applicants.</div>';
+    }
+  }
+
+  document.getElementById('jobForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('postBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Posting…';
+    btn.disabled = true;
+    try {
+      const res = await fetch(API_URL + '/company/jobs', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          title: document.getElementById('jobTitle').value,
+          description: document.getElementById('jobDesc').value,
+          requiredSkills: document.getElementById('jobSkills').value
+        })
+      });
+      if(res.ok) {
+        document.getElementById('postMsg').innerHTML = '<span style="color:#10b981;">✅ Job posted successfully!</span>';
+        document.getElementById('jobForm').reset();
+        loadData();
+      }
+    } catch(err) { console.error(err); }
+    btn.innerHTML = '🚀 Post Job'; btn.disabled = false;
+  });
+
+  loadData();
+
+  /* ═══════════════════════════════════
+     CANVAS — Hiring/Team Animation
+  ═══════════════════════════════════ */
+  const canvas = document.getElementById('scene-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  const PURPLE='#7c3aed', LAVENDER='#a78bfa', CYAN='#06b6d4', AMBER='#f59e0b', GREEN='#10b981', ROSE='#f43f5e';
+
+  // Particles
+  const parts = Array.from({length:45},()=>({
+    x:Math.random()*2000, y:Math.random()*1000,
+    r:1+Math.random()*3, vy:-(0.15+Math.random()*0.35), vx:(Math.random()-.5)*0.2,
+    life:Math.random()*300, maxLife:200+Math.random()*200,
+    color:[PURPLE,CYAN,AMBER][Math.floor(Math.random()*3)], alpha:0
+  }));
+
+  // Two people facing each other with handshake
+  function drawBusiness(x,y,scale,color1,color2,t,op){
+    ctx.save(); ctx.translate(x,y); ctx.scale(scale,scale); ctx.globalAlpha=op;
+    const bob = Math.sin(t)*2;
+    // person 1 (left)
+    ctx.save(); ctx.translate(-40+Math.sin(t)*2, bob);
+    drawSimplePerson(ctx, color1, false, t);
+    ctx.restore();
+    // person 2 (right, mirrored)
+    ctx.save(); ctx.translate(40-Math.sin(t)*2, bob); ctx.scale(-1,1);
+    drawSimplePerson(ctx, color2, true, t);
+    ctx.restore();
+    // handshake glow
+    ctx.save();
+    const gA = (Math.sin(t*2)*0.5+0.5)*0.4+0.3;
+    ctx.globalAlpha = op * gA;
+    ctx.fillStyle = AMBER;
+    ctx.beginPath(); ctx.arc(0, 18, 8, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = op * gA * 0.5;
+    ctx.fillStyle = AMBER;
+    ctx.beginPath(); ctx.arc(0, 18, 14, 0, Math.PI*2); ctx.fill();
+    // sparkles
+    for(let i=0;i<4;i++){
+      const a=t+i*Math.PI/2, r=18+Math.sin(t*3+i)*4;
+      ctx.globalAlpha = op * gA * 0.8;
+      ctx.fillStyle = '#fcd34d';
+      ctx.beginPath(); ctx.arc(Math.cos(a)*r, 18+Math.sin(a)*r, 2, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawSimplePerson(ctx, color, rightArm, t){
+    // legs
+    ctx.fillStyle=color;
+    ctx.fillRect(-10,28,8,24); ctx.fillRect(2,28,8,24);
+    // body
+    ctx.beginPath(); ctx.roundRect(-14,0,28,32,7); ctx.fill();
+    // right arm extended (handshake)
+    if(rightArm){
+      ctx.save(); ctx.translate(14,8); ctx.rotate(-0.5);
+      ctx.fillRect(0,-3,22,8); ctx.restore();
+    } else {
+      ctx.save(); ctx.translate(-14,8); ctx.rotate(0.5);
+      ctx.fillRect(-22,-3,22,8); ctx.restore();
+    }
+    // other arm
+    ctx.save(); ctx.translate(rightArm?-16:16,8); ctx.rotate(rightArm?0.4:-0.4);
+    ctx.fillRect(rightArm?-4:0,-4,8,20); ctx.restore();
+    // head
+    ctx.fillStyle='#f5c5a3'; ctx.beginPath(); ctx.arc(0,-14,13,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.arc(0,-21,13,Math.PI,0); ctx.fill();
+    // smile
+    ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(0,-12,5,0.2,Math.PI-0.2); ctx.stroke();
+    ctx.fillStyle='#1a1a2e';
+    [-4,4].forEach(x2=>{ ctx.beginPath(); ctx.arc(x2,-14,1.8,0,Math.PI*2); ctx.fill(); });
+  }
+
+  // Walkers
+  const walkers = [
+    {x:0, speed:0.55, t:0, color:LAVENDER, bag:PURPLE, scale:0.5, op:0.16},
+    {x:W*0.7, speed:0.45, t:3, color:CYAN, bag:GREEN, scale:0.55, op:0.14},
+  ];
+
+  function drawWalker(x,y,t,sc,color,bagColor,op){
+    ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc); ctx.globalAlpha=op;
+    const legA=Math.sin(t)*0.45, bob=Math.sin(t*2)*2;
+    ctx.save(); ctx.translate(0,bob);
+    [[legA,-8],[-legA,8]].forEach(([a,ox])=>{
+      ctx.save(); ctx.translate(ox,30); ctx.rotate(a);
+      ctx.fillStyle=color; ctx.fillRect(-4,0,8,28);
+      ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.ellipse(a>0?6:-6,28,9,4,a,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(-13,0,26,32,8); ctx.fill();
+    ctx.save(); ctx.translate(16,6); ctx.rotate(Math.sin(t)*0.35);
+    ctx.fillStyle=color; ctx.fillRect(-4,0,8,20);
+    ctx.fillStyle=bagColor; ctx.fillRect(-5,16,14,11);
+    ctx.restore();
+    ctx.save(); ctx.translate(-16,6); ctx.rotate(-Math.sin(t)*0.35);
+    ctx.fillStyle=color; ctx.fillRect(-4,0,8,20); ctx.restore();
+    ctx.fillStyle='#f5c5a3'; ctx.beginPath(); ctx.arc(0,-14,13,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.arc(0,-21,13,Math.PI,0); ctx.fill();
+    ctx.restore(); ctx.restore();
+  }
+
+  // Business pairs
+  const bizPairs = [
+    {x:W*0.15, y:H*0.72, t:0, c1:LAVENDER, c2:CYAN, sc:0.65, op:0.18},
+    {x:W*0.82, y:H*0.68, t:1.5, c1:AMBER, c2:GREEN, sc:0.55, op:0.15},
+  ];
+
+  function animate(){
+    ctx.clearRect(0,0,W,H);
+
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.life++;
+      if(p.life<40) p.alpha=p.life/40*0.18;
+      else if(p.life>p.maxLife-40) p.alpha=(p.maxLife-p.life)/40*0.18;
+      else p.alpha=0.18;
+      if(p.life>p.maxLife){ p.x=Math.random()*W; p.y=H+10; p.life=0; }
+      ctx.save(); ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
+    });
+
+    walkers.forEach(w=>{
+      w.x+=w.speed; w.t+=0.07;
+      if(w.x>W+100) w.x=-80;
+      drawWalker(w.x, H*0.8, w.t, w.scale, w.color, w.bag, w.op);
+    });
+
+    bizPairs.forEach(b=>{ b.t+=0.025; drawBusiness(b.x,b.y,b.sc,b.c1,b.c2,b.t,b.op); });
+
+    requestAnimationFrame(animate);
+  }
+  window.addEventListener('resize',()=>{
+    resize();
+    bizPairs[0].x=W*0.15; bizPairs[0].y=H*0.72;
+    bizPairs[1].x=W*0.82; bizPairs[1].y=H*0.68;
+  });
+  animate();
+</script>
+<script>
+  /* ── Theme Toggle ── */
+  function toggleTheme() {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('careerPortalTheme', next);
+  }
+  (function() {
+    const saved = localStorage.getItem('careerPortalTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+</script>
+</body>
+</html>

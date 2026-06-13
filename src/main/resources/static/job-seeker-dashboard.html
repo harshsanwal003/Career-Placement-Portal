@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Seeker Dashboard | CareerAI</title>
+  <meta name="description" content="Your AI-powered job seeker dashboard — find and apply to perfectly matched jobs.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Scene behind content */
+    #scene-canvas {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Search ────────────────────── */
+    .search-wrap { position: relative; }
+    .search-wrap input { padding-left: 2.6rem; }
+    .search-wrap .search-icon {
+      position: absolute; left: 0.85rem; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted); font-size: 1rem;
+    }
+
+    /* ── Resume Upload Zone ──────── */
+    .upload-zone {
+      border: 2px dashed var(--glass-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: rgba(124,58,237,0.03);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(124,58,237,0.1);
+    }
+    .upload-zone .upload-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+    /* ── Insights card ───────────── */
+    .insight-text {
+      font-size: 0.85rem; line-height: 1.7;
+      color: var(--text-muted);
+      background: rgba(245,158,11,0.06);
+      border-left: 3px solid var(--accent2);
+      padding: 0.8rem 1rem;
+      border-radius: 0 10px 10px 0;
+    }
+
+    /* ── Score ring ──────────────── */
+    .score-ring {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: 3px solid;
+      font-size: 0.78rem; font-weight: 700;
+    }
+
+    /* ── Section heading ─────────── */
+    .section-head {
+      display: flex; align-items: center; gap: 0.7rem;
+      margin-bottom: 1.2rem;
+    }
+    .section-head h4 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .section-head .icon-box {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    /* ── Empty state ─────────────── */
+    .empty-state { text-align: center; padding: 2.5rem 0; color: var(--text-muted); }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 0.7rem; display: block; opacity: 0.5; }
+
+    /* ── Profile pill ────────────── */
+    .profile-pill {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.25);
+      border-radius: 50px;
+      padding: 0.4rem 0.4rem 0.4rem 0.4rem;
+    }
+    .profile-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Smoke blobs -->
+<div class="smoke-blob smoke-blob-1"></div>
+<canvas id="scene-canvas" aria-hidden="true"></canvas>
+
+<!-- ─── NAVBAR ──────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container">
+    <a class="navbar-brand text-gradient fw-bold" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align:-3px;margin-right:6px">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#ng2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="ng2" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+      </svg>CareerAI
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <div class="profile-pill" id="profilePill">
+        <div class="profile-avatar" id="avatarInitial">?</div>
+        <span id="userEmail" style="font-size:0.82rem;color:var(--text-muted);padding-right:0.6rem;"></span>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+        <span class="icon-dark">🌙</span>
+        <span class="icon-light">☀️</span>
+      </button>
+      <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── MAIN ─────────────────────────────── -->
+<div class="page-wrapper">
+  <div class="container py-4">
+
+    <!-- Welcome Header -->
+    <div class="dash-header">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div>
+          <div class="dash-welcome">Hey, <span id="profileName" class="text-gradient">there</span> 👋</div>
+          <div class="dash-sub">Here are your AI-matched opportunities</div>
+        </div>
+        <div class="ms-auto d-flex gap-2 flex-wrap">
+          <span class="smoke-tag smoke-tag-purple">🎯 Job Seeker</span>
+          <span class="smoke-tag smoke-tag-cyan" id="skillCount">0 Skills</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+
+      <!-- ── Left Column ───────────────── -->
+      <div class="col-lg-4">
+
+        <!-- Profile Card -->
+        <div class="card p-4 mb-4">
+          <ul class="nav nav-pills mb-3" id="profileTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="details-tab" data-bs-toggle="pill" data-bs-target="#details" type="button" role="tab">Profile Setup</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="apps-tab" data-bs-toggle="pill" data-bs-target="#apps" type="button" role="tab">My Applications <span id="appCountTab" class="badge bg-light text-dark ms-1">0</span></button>
+            </li>
+          </ul>
+
+          <div class="tab-content" id="profileTabsContent">
+            <div class="tab-pane fade show active" id="details" role="tabpanel">
+              <div class="section-head mt-3">
+                <div class="icon-box" style="background:rgba(124,58,237,0.2);">👤</div>
+                <h4>About Your Profile</h4>
+              </div>
+              <div class="mb-4">
+                <span style="font-size:0.78rem;color:var(--text-muted);">MATCHED SKILLS</span>
+                <div id="skillTags" class="mt-1 d-flex flex-wrap gap-1"></div>
+              </div>
+
+              <!-- Update Email/Password Form -->
+              <div style="background:rgba(255,255,255,0.03); border-radius:12px; padding:1.2rem; border:1px solid var(--glass-border);">
+                <h6 style="margin-bottom:1rem; font-weight:600;">Update Account</h6>
+                <form id="updateProfileForm">
+                  <div class="mb-3">
+                    <label class="form-label" style="font-size:0.85rem;">Email Address</label>
+                    <input type="email" id="updateEmail" class="form-control form-control-sm" placeholder="New Email">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" style="font-size:0.85rem;">New Password</label>
+                    <input type="password" id="updatePassword" class="form-control form-control-sm" placeholder="Leave blank to keep current">
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm w-100">Save Changes</button>
+                  <div id="updateMsg" class="mt-2 text-center" style="font-size:0.85rem;"></div>
+                </form>
+              </div>
+            </div>
+
+            <div class="tab-pane fade" id="apps" role="tabpanel">
+              <div class="section-head mt-3">
+                <div class="icon-box" style="background:rgba(124,58,237,0.2);">📋</div>
+                <h4>My Enrolled Applications</h4>
+              </div>
+              <div id="appsList">
+                <div class="empty-state"><span class="empty-icon">🔄</span>Loading…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Card -->
+        <div class="card p-4 mb-4">
+          <div class="section-head">
+            <div class="icon-box" style="background:rgba(6,182,212,0.2);">📄</div>
+            <h4>Upload Resume</h4>
+          </div>
+          <form id="resumeForm">
+            <label for="resumeFile">Supports PDF, DOC, TXT — AI extracts your skills</label>
+            <div class="upload-zone mt-2" id="uploadZone" onclick="document.getElementById('resumeFile').click()">
+              <div class="upload-icon">☁️</div>
+              <div style="font-size:0.85rem;color:var(--text-muted);">Drop your resume here<br>or <span style="color:var(--primary-light);">browse files</span></div>
+              <input type="file" id="resumeFile" class="d-none" accept=".txt,.pdf,.doc,.docx" required>
+              <div id="selectedFile" class="mt-2" style="font-size:0.8rem;color:var(--accent2);"></div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 mt-3" id="uploadBtn">
+              ✨ Analyze Resume
+            </button>
+            <div id="uploadMsg" class="mt-2 text-center" style="font-size:0.85rem;"></div>
+          </form>
+        </div>
+
+        <!-- Insights Card -->
+        <div id="insightsCard" class="card p-4 mb-4" style="display:none;">
+          <div class="section-head">
+            <div class="icon-box" style="background:rgba(245,158,11,0.2);">🔍</div>
+            <h4 class="text-gradient-warm">AI Insights</h4>
+          </div>
+          <div id="resumeInsights" class="insight-text"></div>
+        </div>
+
+      </div><!-- /left col -->
+
+      <!-- ── Right Column ──────────────── -->
+      <div class="col-lg-8">
+
+        <!-- Jobs Card -->
+        <div class="card p-4 mb-4">
+          <div class="section-head">
+            <div class="icon-box" style="background:rgba(16,185,129,0.2);">💼</div>
+            <h4>Recommended Jobs</h4>
+            <div class="ms-auto search-wrap" style="width:220px;">
+              <span class="search-icon">🔎</span>
+              <input type="text" id="jobSearch" class="form-control form-control-sm" placeholder="Search jobs…" onkeyup="filterJobs()">
+            </div>
+          </div>
+          <div id="jobsList">
+            <div class="empty-state"><span class="empty-icon">🔄</span>Loading opportunities…</div>
+          </div>
+        </div>
+
+        <!-- Applications Card Moved to Profile Tabs -->
+
+      </div><!-- /right col -->
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+<script>
+  /* ── Auth guard ─────────────────── */
+  if(!getToken() || localStorage.getItem('role') !== 'JOB_SEEKER') {
+    window.location.href = '/index.html';
+  }
+
+  let allJobs = [];
+
+  /* ── Load data ──────────────────── */
+  async function loadData() {
+    try {
+      const profileRes = await fetch(API_URL + '/job-seeker/profile', { headers: authHeaders() });
+      const profile = await profileRes.json();
+
+      const name = profile.user.name;
+      document.getElementById('profileName').innerText = name;
+      document.getElementById('userEmail').innerText   = profile.user.email;
+      document.getElementById('avatarInitial').innerText = name.charAt(0).toUpperCase();
+
+      // Skills as tags
+      const skills = (profile.skills || '').split(',').map(s => s.trim()).filter(Boolean);
+      document.getElementById('skillCount').innerText = skills.length + ' Skills';
+      const tagColors = ['smoke-tag-purple','smoke-tag-cyan','smoke-tag-amber','smoke-tag-green'];
+      document.getElementById('skillTags').innerHTML = skills.length
+        ? skills.map((s, i) => `<span class="smoke-tag ${tagColors[i % tagColors.length]}">${s}</span>`).join('')
+        : '<span style="color:var(--text-muted);font-size:0.82rem;">Upload resume to extract skills</span>';
+
+      if(profile.resumeInsights) {
+        document.getElementById('insightsCard').style.display = 'block';
+        document.getElementById('resumeInsights').innerText = profile.resumeInsights;
+      }
+
+      // Jobs
+      const jobsRes = await fetch(API_URL + '/job-seeker/jobs', { headers: authHeaders() });
+      allJobs = await jobsRes.json();
+      displayJobs(allJobs);
+
+      // Applications
+      const appsRes = await fetch(API_URL + '/job-seeker/applications', { headers: authHeaders() });
+      const apps = await appsRes.json();
+      document.getElementById('appCountTab').innerText = apps.length;
+
+      if(apps.length === 0) {
+        document.getElementById('appsList').innerHTML = '<div class="empty-state"><span class="empty-icon">📭</span>No applications yet. Start applying!</div>';
+      } else {
+        document.getElementById('appsList').innerHTML = apps.map(app => `
+          <div class="app-item">
+            <div>
+              <div style="font-weight:600;">${app.job.title}</div>
+              <div style="font-size:0.82rem;color:var(--text-muted);">at ${app.job.company.companyName}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <div class="score-ring" style="border-color:${scoreColor(app.score)};color:${scoreColor(app.score)};">
+                ${app.score.toFixed(0)}%
+              </div>
+              <span class="smoke-tag smoke-tag-green" style="font-size:0.72rem;">Applied</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    } catch(err) { console.error(err); }
+  }
+
+  function scoreColor(s) {
+    if(s >= 75) return '#10b981';
+    if(s >= 50) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  function displayJobs(jobs) {
+    if(jobs.length === 0) {
+      document.getElementById('jobsList').innerHTML = '<div class="empty-state"><span class="empty-icon">🔍</span>No matching jobs found.</div>';
+      return;
+    }
+    document.getElementById('jobsList').innerHTML = jobs.map(job => `
+      <div class="job-item">
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+          <div style="flex:1">
+            <h5>${job.title} <span class="company-badge">${job.company.companyName}</span></h5>
+            <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:0.4rem;">${job.description}</p>
+            <div class="d-flex flex-wrap gap-1">
+              ${job.requiredSkills.split(',').map(s =>
+                `<span class="smoke-tag smoke-tag-cyan" style="font-size:0.72rem;">${s.trim()}</span>`
+              ).join('')}
+            </div>
+          </div>
+          <button class="btn btn-success btn-sm px-3" onclick="applyJob(event, ${job.id})">Apply ↗</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function filterJobs() {
+    const q = document.getElementById('jobSearch').value.toLowerCase();
+    displayJobs(allJobs.filter(j =>
+      j.title.toLowerCase().includes(q) ||
+      j.requiredSkills.toLowerCase().includes(q) ||
+      j.company.companyName.toLowerCase().includes(q)
+    ));
+  }
+
+  async function applyJob(event, jobId) {
+    if(!confirm('Apply to this position?')) return;
+    try {
+      const res = await fetch(API_URL + '/job-seeker/apply/' + jobId, { method: 'POST', headers: authHeaders() });
+      if(res.ok) {
+        // Animate
+        const btn = event.currentTarget;
+        btn.innerHTML = '✅ Applied!'; btn.disabled = true;
+        btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+        setTimeout(() => loadData(), 800);
+      } else { alert('Could not apply. Check if already applied.'); }
+    } catch(err) { console.error(err); }
+  }
+
+  document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('updateEmail').value;
+    const password = document.getElementById('updatePassword').value;
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true; btn.innerText = 'Saving...';
+
+    try {
+      const res = await fetch(API_URL + '/job-seeker/account', {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ email, password })
+      });
+
+      const msg = document.getElementById('updateMsg');
+      if (res.ok) {
+        msg.innerHTML = '<span style="color:#10b981;">✅ Profile updated!</span>';
+        if (email || password) {
+          setTimeout(() => {
+            alert('Account credentials changed. Please log in again.');
+            logout();
+          }, 1500);
+        } else {
+          setTimeout(() => { msg.innerHTML = ''; btn.disabled = false; btn.innerText = 'Save Changes'; }, 3000);
+        }
+      } else {
+        msg.innerHTML = '<span style="color:#ef4444;">❌ Failed to update.</span>';
+        btn.disabled = false; btn.innerText = 'Save Changes';
+      }
+    } catch(err) { 
+      console.error(err);
+      document.getElementById('updateMsg').innerHTML = '<span style="color:#ef4444;">❌ Error.</span>';
+      btn.disabled = false; btn.innerText = 'Save Changes';
+    }
+  });
+
+  /* ── File upload ────────────────── */
+  const resumeFile = document.getElementById('resumeFile');
+  resumeFile.addEventListener('change', () => {
+    const name = resumeFile.files[0]?.name;
+    document.getElementById('selectedFile').innerText = name ? '📎 ' + name : '';
+  });
+
+  // Drag-and-drop
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    if(e.dataTransfer.files[0]) {
+      const dt = new DataTransfer();
+      dt.items.add(e.dataTransfer.files[0]);
+      resumeFile.files = dt.files;
+      document.getElementById('selectedFile').innerText = '📎 ' + e.dataTransfer.files[0].name;
+    }
+  });
+
+  document.getElementById('resumeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if(!resumeFile.files[0]) return;
+    const btn = document.getElementById('uploadBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing…';
+    btn.disabled = true;
+    const formData = new FormData();
+    formData.append('file', resumeFile.files[0]);
+    try {
+      const res = await fetch(API_URL + '/job-seeker/resume', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + getToken() },
+        body: formData
+      });
+      if(res.ok) {
+        document.getElementById('uploadMsg').innerHTML = '<span style="color:#10b981;">✅ Resume analyzed! Updating your profile…</span>';
+        setTimeout(() => { loadData(); btn.innerHTML = '✨ Analyze Resume'; btn.disabled = false; }, 1200);
+      }
+    } catch(err) { console.error(err); btn.innerHTML = '✨ Analyze Resume'; btn.disabled = false; }
+  });
+
+  loadData();
+
+  /* ══════════════════════════════════════
+     CANVAS — Walking + Thinking People
+  ══════════════════════════════════════ */
+  const canvas = document.getElementById('scene-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  const PURPLE = '#7c3aed', LAVENDER = '#a78bfa', CYAN = '#06b6d4', AMBER = '#f59e0b', GREEN = '#10b981';
+
+  /* Particles */
+  const particles = Array.from({length: 50}, () => {
+    const c = [PURPLE, CYAN, LAVENDER][Math.floor(Math.random()*3)];
+    return { x: Math.random()*1000, y: Math.random()*1000, r: 1+Math.random()*3,
+      vy: -(0.2+Math.random()*0.4), vx: (Math.random()-.5)*0.2,
+      life: Math.random()*300, maxLife: 200+Math.random()*200, color: c, alpha: 0 };
+  });
+
+  function drawWalker(x, y, t, scale, color, bagColor, opacity) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); ctx.globalAlpha = opacity;
+    const legA = Math.sin(t)*0.45, armA = Math.sin(t)*0.35, bob = Math.sin(t*2)*2;
+    // shadow
+    ctx.save(); ctx.globalAlpha = opacity*0.2; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(0,62+bob,18,5,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(0, bob);
+    // legs
+    [[legA,-8],[-legA,8]].forEach(([ang,ox]) => {
+      ctx.save(); ctx.translate(ox,30); ctx.rotate(ang);
+      ctx.fillStyle = color; ctx.fillRect(-4,0,8,28);
+      ctx.fillStyle = '#1a1a2e';
+      ctx.beginPath(); ctx.ellipse(ang>0?6:-6,28,10,5,ang,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+    // body
+    ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(-14,0,28,34,8); ctx.fill();
+    // arms
+    [[-armA,-16],[armA+0.3,16]].forEach(([ang,ox],i) => {
+      ctx.save(); ctx.translate(ox,6); ctx.rotate(ang);
+      ctx.fillStyle=color; ctx.fillRect(-4,0,8,22);
+      if(i===1){ ctx.fillStyle=bagColor; ctx.fillRect(-6,18,16,12);
+        ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(-2,18); ctx.quadraticCurveTo(3,12,8,18); ctx.stroke(); }
+      ctx.restore();
+    });
+    // head
+    ctx.fillStyle='#f5c5a3'; ctx.beginPath(); ctx.arc(0,-14,14,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.arc(0,-22,14,Math.PI,0); ctx.fill();
+    [-5,5].forEach(x2 => { ctx.beginPath(); ctx.arc(x2,-14,2,0,Math.PI*2); ctx.fill(); });
+    ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(0,-12,5,0.2,Math.PI-0.2); ctx.stroke();
+    ctx.restore(); ctx.restore();
+  }
+
+  const walkers = [
+    {x:W*0.1, speed:0.5, t:0, color:LAVENDER, bag:PURPLE, scale:0.55, op:0.18},
+    {x:W*0.6, speed:0.7, t:2, color:CYAN,     bag:AMBER,  scale:0.6,  op:0.15},
+    {x:W*0.3, speed:0.4, t:4, color:AMBER,    bag:GREEN,  scale:0.5,  op:0.13},
+  ];
+
+  // Floating thought-bubbles for seeker scene
+  const thoughts = [
+    {x:W*0.15, y:H*0.65, t:0, color:LAVENDER, op:0.16, icons:['💼','⭐','🎯'], ci:0, bt:0},
+    {x:W*0.85, y:H*0.7,  t:2, color:CYAN,     op:0.14, icons:['📊','🚀','💡'], ci:0, bt:0.5},
+  ];
+
+  function drawThought(th) {
+    const bob = Math.sin(th.t)*10;
+    ctx.save(); ctx.translate(th.x, th.y+bob); ctx.globalAlpha = th.op;
+    // sitting body
+    ctx.fillStyle = th.color;
+    ctx.beginPath(); ctx.roundRect(-15,-10,30,36,8); ctx.fill();
+    ctx.fillRect(-22,22,16,10); ctx.fillRect(6,22,16,10);
+    // arm up
+    ctx.save(); ctx.translate(18,0); ctx.rotate(-0.6);
+    ctx.fillStyle=th.color; ctx.fillRect(-4,0,8,22); ctx.restore();
+    // head
+    ctx.fillStyle='#f5c5a3'; ctx.beginPath(); ctx.arc(0,-24,14,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.arc(0,-32,14,Math.PI,0); ctx.fill();
+    ctx.fillStyle='#1a1a2e';
+    [-5,5].forEach(x2 => { ctx.beginPath(); ctx.arc(x2,-24,2,0,Math.PI*2); ctx.fill(); });
+    // thought bubble
+    const bp = (Math.sin(th.bt)*0.5+0.5);
+    ctx.globalAlpha = th.op * bp * 1.8;
+    ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.strokeStyle=th.color; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(34,-50,22,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    [0.2,0.4,0.6].forEach((f,i)=>{
+      ctx.beginPath(); ctx.arc(14+i*8,-30,3+i,0,Math.PI*2); ctx.fill();
+    });
+    ctx.globalAlpha = th.op * bp * 2.5;
+    ctx.font='18px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(th.icons[th.ci], 34,-50);
+    ctx.restore();
+  }
+
+  let tick = 0;
+  function animate() {
+    ctx.clearRect(0,0,W,H);
+    tick++;
+
+    // particles
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.life++;
+      if(p.life < 40) p.alpha = p.life/40*0.2;
+      else if(p.life > p.maxLife-40) p.alpha = (p.maxLife-p.life)/40*0.2;
+      else p.alpha = 0.2;
+      if(p.life > p.maxLife) { p.x=Math.random()*W; p.y=H+10; p.life=0; }
+      ctx.save(); ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
+    });
+
+    // walkers
+    walkers.forEach(w => {
+      w.x += w.speed; w.t += 0.07;
+      if(w.x > W+100) w.x = -80;
+      drawWalker(w.x, H*0.82, w.t, w.scale, w.color, w.bag, w.op);
+    });
+
+    // thinkers
+    thoughts.forEach((th,i) => {
+      th.t += 0.02; th.bt += 0.018;
+      if(tick % 120 === i*60) th.ci = (th.ci+1) % th.icons.length;
+      drawThought(th);
+    });
+
+    requestAnimationFrame(animate);
+  }
+  window.addEventListener('resize', () => {
+    resize();
+    thoughts[0].x = W*0.15; thoughts[0].y = H*0.65;
+    thoughts[1].x = W*0.85; thoughts[1].y = H*0.7;
+  });
+  animate();
+</script>
+<script>
+  /* ── Theme Toggle ── */
+  function toggleTheme() {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('careerPortalTheme', next);
+  }
+  (function() {
+    const saved = localStorage.getItem('careerPortalTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+</script>
+</body>
+</html>

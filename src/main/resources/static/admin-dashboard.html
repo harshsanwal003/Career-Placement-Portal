@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | CareerAI</title>
+  <meta name="description" content="System-wide analytics and management for the AI Career Portal.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #scene-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Stat cards grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-bottom: 2rem; }
+    @media(max-width:768px){ .stats-grid{ grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:480px){ .stats-grid{ grid-template-columns:1fr; } }
+
+    .stat-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 1.8rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(.34,1.56,.64,1);
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,0.04),transparent);
+      border-radius:inherit;
+    }
+    .stat-card::after {
+      content:''; position:absolute; bottom:0; left:0; right:0;
+      height:3px; border-radius:0 0 20px 20px;
+    }
+    .stat-card.c-users::after   { background: linear-gradient(90deg,var(--primary),var(--primary-light)); }
+    .stat-card.c-seekers::after { background: linear-gradient(90deg,var(--success),#34d399); }
+    .stat-card.c-companies::after{ background: linear-gradient(90deg,var(--accent),#22d3ee); }
+    .stat-card.c-jobs::after    { background: linear-gradient(90deg,var(--accent2),#fcd34d); }
+
+    .stat-card:hover {
+      transform: translateY(-8px) scale(1.03);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .stat-card .stat-icon { font-size: 2rem; margin-bottom: 0.6rem; display: block; }
+    .stat-card .stat-num {
+      font-size: 2.8rem; font-weight: 900; line-height: 1;
+      display: block; margin-bottom: 0.4rem;
+    }
+    .stat-card .stat-lbl { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+
+    /* Pulse animation on new data */
+    @keyframes statPulse {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
+    .stat-updated { animation: statPulse 0.5s ease; }
+
+    /* Details section */
+    .details-section { display: none; }
+
+    /* Section head */
+    .section-head { display:flex; align-items:center; gap:0.7rem; margin-bottom:1.2rem; }
+    .section-head h4 { margin:0; font-size:1.1rem; font-weight:700; }
+    .section-head .icon-box {
+      width:36px; height:36px; border-radius:10px;
+      display:flex; align-items:center; justify-content:center; font-size:1.1rem;
+    }
+
+    /* Table */
+    .data-table { width:100%; border-collapse:collapse; }
+    .data-table th {
+      font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em;
+      color:var(--text-muted); padding:0.6rem 1rem; border-bottom:1px solid var(--glass-border);
+      font-weight:600;
+    }
+    .data-table td {
+      padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04);
+      font-size:0.88rem; vertical-align:middle;
+    }
+    .data-table tbody tr:hover td { background:rgba(124,58,237,0.06); }
+    .data-table tbody tr:last-child td { border-bottom:none; }
+
+    /* Live indicator */
+    .live-dot {
+      display:inline-flex; align-items:center; gap:0.4rem;
+      font-size:0.75rem; color:var(--success);
+    }
+    .live-dot::before {
+      content:''; width:8px; height:8px; border-radius:50%; background:var(--success);
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+    @keyframes livePulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:0.5; transform:scale(0.8); }
+    }
+
+    .empty-state { text-align:center; padding:2.5rem 0; color:var(--text-muted); }
+    .empty-state .ei { font-size:2.8rem; display:block; margin-bottom:0.7rem; opacity:0.5; }
+  </style>
+</head>
+<body>
+
+<div class="smoke-blob smoke-blob-1"></div>
+<canvas id="scene-canvas" aria-hidden="true"></canvas>
+
+<!-- ─── NAVBAR ──────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+  <div class="container">
+    <a class="navbar-brand text-gradient fw-bold" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="vertical-align:-3px;margin-right:6px">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="url(#ng4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="ng4" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+      </svg>CareerAI Admin
+    </a>
+    <div class="d-flex align-items-center gap-3 ms-auto">
+      <span class="smoke-tag smoke-tag-purple">🛡 Administrator</span>
+      <span class="live-dot">Live</span>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+        <span class="icon-dark">🌙</span>
+        <span class="icon-light">☀️</span>
+      </button>
+      <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ─── MAIN ─────────────────────────────── -->
+<div class="page-wrapper">
+  <div class="container py-4">
+
+    <!-- Header -->
+    <div class="dash-header">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div>
+          <h1 class="dash-welcome">System <span class="text-gradient">Overview</span> 📊</h1>
+          <div class="dash-sub">Click any card to drill into detailed records • Auto-refreshes every 5s</div>
+        </div>
+        <div class="ms-auto smoke-tag smoke-tag-amber" id="lastUpdated">Updating…</div>
+      </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card c-users" onclick="viewAll('users')" title="View all accounts">
+        <span class="stat-icon">👥</span>
+        <span class="stat-num text-gradient" id="statUsers">—</span>
+        <span class="stat-lbl">Total Accounts</span>
+      </div>
+      <div class="stat-card c-seekers" onclick="viewAll('job-seekers')" title="View all job seekers">
+        <span class="stat-icon">🎯</span>
+        <span class="stat-num" style="color:#34d399;" id="statJobSeekers">—</span>
+        <span class="stat-lbl">Job Seekers</span>
+      </div>
+      <div class="stat-card c-companies" onclick="viewAll('companies')" title="View all companies">
+        <span class="stat-icon">🏢</span>
+        <span class="stat-num" style="color:#22d3ee;" id="statCompanies">—</span>
+        <span class="stat-lbl">Companies</span>
+      </div>
+      <div class="stat-card c-jobs" onclick="viewAll('jobs')" title="View all job listings">
+        <span class="stat-icon">💼</span>
+        <span class="stat-num" style="color:#fcd34d;" id="statJobs">—</span>
+        <span class="stat-lbl">Active Listings</span>
+      </div>
+    </div>
+
+    <!-- Details Section -->
+    <div class="details-section" id="detailsSection">
+      <div class="card p-4">
+        <div class="section-head">
+          <div class="icon-box" id="detailsIcon" style="background:rgba(124,58,237,0.2);">📋</div>
+          <h4 id="detailsTitle">Details</h4>
+          <div class="ms-auto">
+            <button class="btn btn-sm btn-outline-secondary" onclick="hideDetails()">✕ Close</button>
+          </div>
+        </div>
+        <hr>
+        <div id="detailsContent" class="table-responsive">
+          <div class="empty-state"><span class="ei">🔄</span>Loading records…</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="app.js"></script>
+<script>
+  if(!getToken() || localStorage.getItem('role') !== 'ADMIN') {
+    window.location.href = '/index.html';
+  }
+
+  let prevStats = {};
+
+  async function loadStats() {
+    try {
+      const res = await fetch(API_URL + '/admin/stats', { headers: authHeaders() });
+      const s = await res.json();
+
+      ['statUsers','statJobSeekers','statCompanies','statJobs'].forEach((id, i) => {
+        const keys = ['totalUsers','totalJobSeekers','totalCompanies','totalJobs'];
+        const el = document.getElementById(id);
+        const newVal = s[keys[i]] || 0;
+        if(prevStats[keys[i]] !== newVal) {
+          el.innerText = newVal;
+          el.parentElement.classList.remove('stat-updated');
+          void el.parentElement.offsetWidth; // force reflow
+          el.parentElement.classList.add('stat-updated');
+        }
+        prevStats[keys[i]] = newVal;
+      });
+
+      const now = new Date().toLocaleTimeString();
+      document.getElementById('lastUpdated').innerText = '⟳ Updated ' + now;
+    } catch(err) { console.error(err); }
+  }
+
+  async function viewAll(type) {
+    const section = document.getElementById('detailsSection');
+    section.style.display = 'block';
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('detailsContent').innerHTML =
+      '<div class="empty-state"><span class="ei">🔄</span>Loading records…</div>';
+
+    const configs = {
+      'users':      { title:'All Accounts',     icon:'👥', url: null },
+      'job-seekers':{ title:'All Job Seekers',   icon:'🎯', url:'/admin/job-seekers' },
+      'companies':  { title:'All Companies',     icon:'🏢', url:'/admin/companies' },
+      'jobs':       { title:'All Job Listings',  icon:'💼', url:'/admin/jobs' },
+    };
+    const cfg = configs[type];
+    document.getElementById('detailsTitle').innerText = cfg.title;
+    document.getElementById('detailsIcon').innerText  = cfg.icon;
+
+    if(!cfg.url) {
+      document.getElementById('detailsContent').innerHTML =
+        '<div class="empty-state"><span class="ei">📊</span>Use the specific cards below for detailed records.</div>';
+      return;
+    }
+
+    try {
+      const res = await fetch(API_URL + cfg.url, { headers: authHeaders() });
+      const data = await res.json();
+      renderTable(type, data);
+    } catch(err) {
+      document.getElementById('detailsContent').innerHTML =
+        '<div class="text-danger text-center py-3">⚠️ Failed to load data.</div>';
+    }
+  }
+
+  function renderTable(type, data) {
+    if(data.length === 0) {
+      document.getElementById('detailsContent').innerHTML =
+        '<div class="empty-state"><span class="ei">📭</span>No records found.</div>';
+      return;
+    }
+
+    const tagColors = { purple:'smoke-tag-purple', cyan:'smoke-tag-cyan', amber:'smoke-tag-amber', green:'smoke-tag-green' };
+
+    let rows = '';
+    let headers = '';
+
+    if(type === 'job-seekers') {
+      headers = '<th>Name</th><th>Email</th><th>Skills</th><th>AI Insights</th>';
+      rows = data.map(d => `
+        <tr>
+          <td><span style="font-weight:600;">${d.user.name}</span></td>
+          <td style="color:var(--text-muted);">${d.user.email}</td>
+          <td>
+            <div class="d-flex flex-wrap gap-1">
+              ${(d.skills||'None').split(',').slice(0,3).map(s =>
+                `<span class="smoke-tag smoke-tag-purple" style="font-size:0.68rem;">${s.trim()}</span>`
+              ).join('')}
+            </div>
+          </td>
+          <td style="font-size:0.8rem;color:var(--text-muted);max-width:220px;">
+            ${d.resumeInsights ? d.resumeInsights.substring(0, 100)+(d.resumeInsights.length>100?'…':'') : '<em>No insights</em>'}
+          </td>
+        </tr>
+      `).join('');
+    } else if(type === 'companies') {
+      headers = '<th>Company</th><th>Admin</th><th>Email</th>';
+      rows = data.map(d => `
+        <tr>
+          <td><span class="smoke-tag smoke-tag-cyan" style="font-size:0.82rem;">${d.companyName}</span></td>
+          <td style="font-weight:600;">${d.user.name}</td>
+          <td style="color:var(--text-muted);">${d.user.email}</td>
+        </tr>
+      `).join('');
+    } else if(type === 'jobs') {
+      headers = '<th>Title</th><th>Company</th><th>Required Skills</th>';
+      rows = data.map(d => `
+        <tr>
+          <td style="font-weight:600;">${d.title}</td>
+          <td><span class="smoke-tag smoke-tag-amber" style="font-size:0.75rem;">${d.company.companyName}</span></td>
+          <td>
+            <div class="d-flex flex-wrap gap-1">
+              ${d.requiredSkills.split(',').map(s =>
+                `<span class="smoke-tag smoke-tag-green" style="font-size:0.68rem;">${s.trim()}</span>`
+              ).join('')}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('detailsContent').innerHTML = `
+      <table class="data-table">
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function hideDetails() {
+    document.getElementById('detailsSection').style.display = 'none';
+  }
+
+  loadStats();
+  setInterval(loadStats, 5000);
+
+  /* ══════════════════════════════════════
+     CANVAS — Busy Office Scene
+  ══════════════════════════════════════ */
+  const canvas = document.getElementById('scene-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  const PURPLE='#7c3aed', LAVENDER='#a78bfa', CYAN='#06b6d4', AMBER='#f59e0b', GREEN='#10b981';
+
+  // Floating data orbs (representing live system data)
+  const orbs = Array.from({length:12}, (_, i) => ({
+    x: 50 + Math.random() * (typeof W !== 'undefined' ? W : 1200) * 0.9,
+    y: 50 + Math.random() * (typeof H !== 'undefined' ? H : 700) * 0.85,
+    r: 3 + Math.random() * 5,
+    vx: (Math.random()-.5)*0.3,
+    vy: (Math.random()-.5)*0.3,
+    color: [PURPLE, CYAN, LAVENDER, AMBER, GREEN][i % 5],
+    alpha: 0.1 + Math.random() * 0.15,
+    pulse: Math.random() * Math.PI * 2,
+  }));
+
+  // Particles
+  const parts = Array.from({length:40}, ()=>({
+    x:Math.random()*2000, y:Math.random()*1000,
+    r:1+Math.random()*3, vy:-(0.15+Math.random()*0.3), vx:(Math.random()-.5)*0.15,
+    life:Math.random()*300, maxLife:180+Math.random()*200,
+    color:[PURPLE,CYAN,AMBER,GREEN][Math.floor(Math.random()*4)], alpha:0
+  }));
+
+  function drawAdminPerson(cx, cy, t, color, scale, op, label) {
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.globalAlpha = op;
+    const bob = Math.sin(t)*3;
+    ctx.save(); ctx.translate(0, bob);
+    // desk
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.beginPath(); ctx.roundRect(-40, 36, 80, 10, 4); ctx.fill();
+    // monitor
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.roundRect(-26, 2, 52, 36, 6); ctx.fill();
+    // screen glow
+    ctx.fillStyle = color; ctx.globalAlpha = op * (0.15 + Math.sin(t*2)*0.1);
+    ctx.beginPath(); ctx.roundRect(-22, 5, 44, 28, 4); ctx.fill();
+    ctx.globalAlpha = op;
+    // bar chart on screen
+    [6,10,7,12,9].forEach((h,i) => {
+      ctx.fillStyle = i===3 ? AMBER : color;
+      ctx.globalAlpha = op * 0.6;
+      ctx.fillRect(-18+i*9, 28-h, 7, h);
+    });
+    ctx.globalAlpha = op;
+    // body
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.roundRect(-12, 38, 24, 28, 7); ctx.fill();
+    // arms on desk
+    ctx.fillRect(-24, 44, 18, 8); // left arm
+    ctx.fillRect(6, 44, 18, 8);   // right arm
+    // head
+    ctx.fillStyle = '#f5c5a3';
+    ctx.beginPath(); ctx.arc(0, 26, 13, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath(); ctx.arc(0, 19, 13, Math.PI, 0); ctx.fill();
+    // glasses (admin look)
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+    [-6, 6].forEach(x => {
+      ctx.beginPath(); ctx.arc(x, 26, 4, 0, Math.PI*2); ctx.stroke();
+    });
+    ctx.beginPath(); ctx.moveTo(-2, 26); ctx.lineTo(2, 26); ctx.stroke();
+    ctx.restore();
+    // label tag
+    if(label) {
+      ctx.save(); ctx.globalAlpha = op * 0.7;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.roundRect(-20+bob*0.2, -18, 40, 14, 7); ctx.fill();
+      ctx.fillStyle = color; ctx.font = 'bold 9px Outfit,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, bob*0.2, -11);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // Walker for bottom strip
+  const walkers = [
+    {x:0, speed:0.6, t:0, color:LAVENDER, bag:PURPLE, scale:0.5, op:0.18},
+    {x:W*0.5, speed:0.45, t:2, color:CYAN, bag:GREEN, scale:0.48, op:0.14},
+    {x:W*0.8, speed:0.55, t:4, color:AMBER, bag:CYAN, scale:0.52, op:0.16},
+  ];
+
+  function drawWalker(x,y,t,sc,color,bagColor,op){
+    ctx.save(); ctx.translate(x,y); ctx.scale(sc,sc); ctx.globalAlpha=op;
+    const legA=Math.sin(t)*0.45, bob=Math.sin(t*2)*2;
+    ctx.save(); ctx.translate(0,bob);
+    [[legA,-8],[-legA,8]].forEach(([a,ox])=>{
+      ctx.save(); ctx.translate(ox,30); ctx.rotate(a);
+      ctx.fillStyle=color; ctx.fillRect(-4,0,8,28);
+      ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.ellipse(a>0?6:-6,28,9,4,a,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(-13,0,26,32,8); ctx.fill();
+    ctx.save(); ctx.translate(16,6); ctx.rotate(Math.sin(t)*0.35);
+    ctx.fillStyle=color; ctx.fillRect(-4,0,8,20);
+    ctx.fillStyle=bagColor; ctx.fillRect(-5,16,14,11); ctx.restore();
+    ctx.save(); ctx.translate(-16,6); ctx.rotate(-Math.sin(t)*0.35);
+    ctx.fillStyle=color; ctx.fillRect(-4,0,8,20); ctx.restore();
+    ctx.fillStyle='#f5c5a3'; ctx.beginPath(); ctx.arc(0,-14,13,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a1a2e'; ctx.beginPath(); ctx.arc(0,-21,13,Math.PI,0); ctx.fill();
+    ctx.restore(); ctx.restore();
+  }
+
+  const adminPeople = [
+    {x:0.12, y:0.55, t:0,   color:LAVENDER, scale:0.7, op:0.18, label:'Admin'},
+    {x:0.88, y:0.5,  t:1.5, color:CYAN,     scale:0.65, op:0.15, label:'Analytics'},
+    {x:0.5,  y:0.78, t:3,   color:AMBER,    scale:0.6,  op:0.13, label:null},
+  ];
+
+  function animate() {
+    ctx.clearRect(0,0,W,H);
+
+    // Particles
+    parts.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.life++;
+      if(p.life<40) p.alpha=p.life/40*0.16;
+      else if(p.life>p.maxLife-40) p.alpha=(p.maxLife-p.life)/40*0.16;
+      else p.alpha=0.16;
+      if(p.life>p.maxLife){ p.x=Math.random()*W; p.y=H+10; p.life=0; }
+      ctx.save(); ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); ctx.restore();
+    });
+
+    // Data orbs with connections
+    orbs.forEach(o=>{
+      o.x+=o.vx; o.y+=o.vy; o.pulse+=0.03;
+      if(o.x<0||o.x>W) o.vx*=-1;
+      if(o.y<0||o.y>H) o.vy*=-1;
+    });
+    // Draw connections between nearby orbs
+    for(let i=0;i<orbs.length;i++){
+      for(let j=i+1;j<orbs.length;j++){
+        const dx=orbs[i].x-orbs[j].x, dy=orbs[i].y-orbs[j].y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<160){
+          ctx.save(); ctx.globalAlpha=(1-dist/160)*0.08; ctx.strokeStyle=orbs[i].color;
+          ctx.lineWidth=1; ctx.beginPath();
+          ctx.moveTo(orbs[i].x,orbs[i].y); ctx.lineTo(orbs[j].x,orbs[j].y); ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+    orbs.forEach(o=>{
+      const pa = o.alpha*(0.7+Math.sin(o.pulse)*0.3);
+      ctx.save(); ctx.globalAlpha=pa;
+      const grd=ctx.createRadialGradient(o.x,o.y,0,o.x,o.y,o.r*2.5);
+      grd.addColorStop(0,o.color); grd.addColorStop(1,'transparent');
+      ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(o.x,o.y,o.r*2.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=o.color; ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+
+    // Admin people at desks
+    adminPeople.forEach(p=>{
+      p.t+=0.025;
+      drawAdminPerson(W*p.x, H*p.y, p.t, p.color, p.scale, p.op, p.label);
+    });
+
+    // Walkers
+    walkers.forEach(w=>{
+      w.x+=w.speed; w.t+=0.07;
+      if(w.x>W+100) w.x=-80;
+      drawWalker(w.x, H*0.88, w.t, w.scale, w.color, w.bag, w.op);
+    });
+
+    requestAnimationFrame(animate);
+  }
+  window.addEventListener('resize', resize);
+  animate();
+</script>
+<script>
+  /* ── Theme Toggle ── */
+  function toggleTheme() {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('careerPortalTheme', next);
+  }
+  // Apply saved theme on load (flash-free)
+  (function() {
+    const saved = localStorage.getItem('careerPortalTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+  })();
+</script>
+</body>
+</html>
+
